@@ -1,2 +1,3 @@
 logs/*
 .vscode
+rucio_access_log_parser.output

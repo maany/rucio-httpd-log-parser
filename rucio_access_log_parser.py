@@ -2,7 +2,7 @@ import argparse
 from functools import partial, reduce
 import logging
 import re
-
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,13 @@ COMMON_URLS = (
 
 
 def process_logs(logfile):
-    processed_logs = []
     urls = {f"{url}": (0, []) for url, controller, description in COMMON_URLS}
+    total_log_entries = 0
+    validated_log_entries = 0
+    matched_log_entries = 0
+    proxied_entries = []
 
-    def match_and_count(match):
+    def _match_and_count(match):
         url = match.group(4)
         for key in urls.keys():
             if url.startswith(key):
@@ -52,14 +55,30 @@ def process_logs(logfile):
                 return True
                 
         return False
-
-    processed_logs = [
-        re.search(REGEX, line).groups()
-        for line in logfile
-        if re.match(REGEX, line) and match_and_count(re.match(REGEX, line))
-    ]
-
-    return processed_logs
+    
+    validate = lambda log: re.match(REGEX, log)
+    
+    for line in logfile.readlines():
+        total_log_entries = total_log_entries + 1
+        validated_log = validate(line)
+        if not validated_log:
+            continue
+        if _match_and_count(validated_log):
+            matched_log_entries = matched_log_entries + 1
+        else: 
+            proxied_entries.append(line)
+        validated_log_entries = validated_log_entries + 1
+   
+    urls = sorted(urls.items(), key=lambda d: d[1][0], reverse=True)
+    output = {
+        "total": total_log_entries,
+        "validated": validated_log_entries,
+        "matched": matched_log_entries,
+        "unmatched": len(proxied_entries),
+        "url_analysis": urls,
+        "proxied_entries": proxied_entries,
+    }
+    return json.dumps(output, indent=4)
 
 
 if __name__ == "__main__":
@@ -72,9 +91,19 @@ if __name__ == "__main__":
         type=argparse.FileType("r", encoding="UTF-8"),
         help="The path to httpd access logs to parse",
     )
+    parser.add_argument(
+        "-o",
+        dest="output_file",
+        default="./rucio_access_log_parser.output",
+        type=argparse.FileType("w", encoding="UTF-8"),
+        help="The output file"
+    )
     args = parser.parse_args()
     httpd_logfile = args.httpd_access_log_file
+    output_file = args.output_file
     try:
-        process_logs(httpd_logfile)
+        output = process_logs(httpd_logfile)
+        output_file.write(output)
     finally:
-        args.httpd_access_log_file.close()
+        httpd_logfile.close()
+        output_file.close()
