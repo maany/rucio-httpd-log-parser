@@ -1,3 +1,27 @@
+"""[summary]
+This script evalues the httpd access logs for Rucio WebUI deployments
+and analysis the frequency of hitting the different endpoints.
+
+[usage]
+
+NOTE: requires Python3
+
+python3 rucio_access_log_parser.py [-h] -f HTTPD_ACCESS_LOG_FILE [-o OUTPUT_FILE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f HTTPD_ACCESS_LOG_FILE
+                        The path to httpd access logs to parse
+  -o OUTPUT_FILE        The output file
+
+[author]
+Mayank Sharma <mayank.sharma@cern.ch>
+
+
+[version] 
+1.0
+"""
+
 import argparse
 from functools import partial, reduce
 import logging
@@ -53,11 +77,11 @@ def process_logs(logfile):
                 entries.append(match.group(4))
                 urls[key] = (count + 1, entries)
                 return True
-                
+
         return False
-    
+
     validate = lambda log: re.match(REGEX, log)
-    
+
     for line in logfile.readlines():
         total_log_entries = total_log_entries + 1
         validated_log = validate(line)
@@ -65,10 +89,10 @@ def process_logs(logfile):
             continue
         if _match_and_count(validated_log):
             matched_log_entries = matched_log_entries + 1
-        else: 
+        else:
             proxied_entries.append(line)
         validated_log_entries = validated_log_entries + 1
-   
+
     urls = sorted(urls.items(), key=lambda d: d[1][0], reverse=True)
     output = {
         "total": total_log_entries,
@@ -96,7 +120,7 @@ if __name__ == "__main__":
         dest="output_file",
         default="./rucio_access_log_parser.output",
         type=argparse.FileType("w", encoding="UTF-8"),
-        help="The output file"
+        help="The output file",
     )
     args = parser.parse_args()
     httpd_logfile = args.httpd_access_log_file
