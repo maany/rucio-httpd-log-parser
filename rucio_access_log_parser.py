@@ -22,17 +22,16 @@ Mayank Sharma <mayank.sharma@cern.ch>
 
 
 [version] 
-2.0
+2.1
 """
 
 import argparse
 import logging
-from pydoc import describe
 import re
 import json
 
 logger = logging.getLogger(__name__)
-VERSION = 2
+VERSION = 2.1
 REGEX_PUPPET = r"(?P<ip>.*?) - - \[(?P<timestamp>.*?)\] \"(?P<verb>.*?) (?P<url>.*) .*\" (?P<status_code>\d*) .*"
 REGEX_K8S = r"\[(?P<timestamp>.*?)\].*\"(?P<verb>.*?) (?P<url>.*) .*\".*\".*?\""
 COMMON_URLS = (
